@@ -4568,6 +4568,10 @@ function _thankYouMailtoURL(forceTY){
 }
 function _openThankYouMail(forceTY){
   const url=_thankYouMailtoURL(forceTY);
+  // Embedded in the CRM iframe: browsers block launching mailto: from a subframe, so the email
+  // never opens. Hand it to the TOP window instead (same-origin, still within this click's user
+  // gesture). mailto: hands off to the mail app — the page itself doesn't navigate or reload.
+  try{ if(window.top && window.top!==window.self){ window.top.location.href=url; return; } }catch(_){}
   const a=document.createElement("a");a.href=url;a.style.display="none";document.body.appendChild(a);
   a.click();
   setTimeout(()=>{try{a.remove();}catch(e){}},150);
