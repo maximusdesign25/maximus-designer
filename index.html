@@ -5281,6 +5281,22 @@ function _renderImpl(app){
           } else if(S.fireTemper){
             fzTitleRow.appendChild(_premBadge({tone:'fire',icon:'flame',label:'Temper Glass',title:'California Ch.7A / WUI — exterior windows need ≥1 tempered lite. Use "Fire Code (1 lite)" or full Tempered on each window. Verify with the AHJ.'}));
           }
+          // Manual "Check fire zone" button. The auto-check only fires on address-field blur, but the
+          // CRM hand-off fills the address programmatically (no blur), so this lets the rep run the
+          // CAL FIRE lookup on demand. force=true re-checks even if the address is unchanged.
+          if(!S.fireZoneChecking){
+            const _fzReady = !!(S.custAddress && ((S.custCity&&S.custCity.trim())||(S.custZip&&S.custZip.trim())));
+            const _fzBtn = btn(S.fireZoneSource ? "Re-check" : "Check fire zone", ()=>{ if(_fzReady){ try{ checkFireZone(true); }catch(_){} } }, {
+              flex:"none",display:"inline-flex",alignItems:"center",gap:"5px",
+              background:_fzReady?"rgba(214,73,47,.10)":"transparent",
+              border:"1px solid "+(_fzReady?"rgba(214,73,47,.34)":c.border),
+              color:_fzReady?"#D6492F":c.muted,
+              borderRadius:"16px",padding:"3px 10px",fontSize:"10.5px",fontWeight:"700",
+              letterSpacing:"-0.005em",cursor:_fzReady?"pointer":"default",opacity:_fzReady?"1":".55",whiteSpace:"nowrap"
+            });
+            if(!_fzReady) _fzBtn.title="Enter the customer's address (and city or ZIP) first";
+            fzTitleRow.appendChild(_fzBtn);
+          }
           fzL.appendChild(fzTitleRow);
           const sub = S.fireZoneChecking ? "Looking up the CAL FIRE hazard zone for this address…"
             : S.fireTemper ? ("Temper required"+(S.fireZoneLabel?" · "+S.fireZoneLabel:"")+". Tempered glazing per Ch.7A.")
