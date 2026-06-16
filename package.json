@@ -1,0 +1,17 @@
+{
+  "name": "scwp-maximus-pro",
+  "version": "3.0.0",
+  "private": true,
+  "description": "SCWP · MAXIMUS PRO · Licensed build (3-device limit)",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "devDependencies": {
+    "html-minifier-terser": "^7.2.0"
+  }
+}

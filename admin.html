@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>SCWP · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{background:#0B0B0F;color:#F5F5F0;font-family:'Outfit',system-ui,sans-serif;min-height:100vh;padding:32px 20px;}
+  .wrap{max-width:980px;margin:0 auto;}
+  h1{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:#D4B47A;letter-spacing:0.02em;}
+  .sub{font-size:11px;letter-spacing:0.28em;font-weight:600;text-transform:uppercase;opacity:0.55;margin-top:4px;margin-bottom:32px;}
+  .card{background:rgba(255,255,255,0.03);border:1px solid rgba(212,180,122,0.18);border-radius:18px;padding:24px;margin-bottom:20px;backdrop-filter:blur(8px);}
+  .label{font-size:9px;letter-spacing:0.28em;font-weight:700;text-transform:uppercase;opacity:0.55;margin-bottom:10px;display:block;}
+  input,textarea,select{width:100%;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(212,180,122,0.25);color:inherit;font-size:15px;font-family:inherit;}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:#D4B47A;box-shadow:0 0 0 3px rgba(212,180,122,0.18);}
+  .btn{padding:13px 22px;border-radius:12px;background:linear-gradient(135deg,#D4B47A,#B8985E);color:#0B0B0F;font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;border:none;cursor:pointer;transition:transform .15s;font-family:inherit;}
+  .btn:active{transform:scale(0.97);}
+  .btn:disabled{opacity:0.5;cursor:wait;}
+  .btn.danger{background:linear-gradient(135deg,#C8483E,#9B362D);color:#FFF;}
+  .btn.ghost{background:transparent;border:1.5px solid rgba(212,180,122,0.4);color:#D4B47A;}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .grow{flex:1;min-width:200px;}
+  .msg{margin-top:14px;font-size:13px;min-height:18px;}
+  .msg.error{color:#FF6B6B;}
+  .msg.ok{color:#7BC97B;}
+  .lic{border:1px solid rgba(212,180,122,0.2);border-radius:14px;padding:18px;margin-top:14px;}
+  .lic.revoked{opacity:0.55;border-color:rgba(255,107,107,0.4);}
+  .lic-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .lic-key{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:#D4B47A;letter-spacing:0.05em;}
+  .lic-meta{font-size:11px;opacity:0.6;margin-top:4px;letter-spacing:0.04em;}
+  .lic-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .lic-actions .btn{padding:8px 14px;font-size:11px;}
+  .dev{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:10px;margin-top:6px;font-size:13px;gap:10px;flex-wrap:wrap;}
+  .dev-info{flex:1;min-width:180px;}
+  .dev-label{font-weight:600;}
+  .dev-meta{font-size:11px;opacity:0.55;margin-top:2px;font-family:'DM Mono',monospace;}
+  .dev-actions .btn{padding:6px 12px;font-size:10px;}
+  .empty{opacity:0.5;font-style:italic;font-size:13px;padding:10px 0;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;}
+  .badge.full{background:rgba(255,107,107,0.18);color:#FF6B6B;}
+  .badge.ok{background:rgba(123,201,123,0.16);color:#7BC97B;}
+  .badge.revoked{background:rgba(255,107,107,0.18);color:#FF6B6B;}
+  .hidden{display:none;}
+  .login-wrap{max-width:380px;margin:80px auto 0;}
+  .copy-hint{font-size:11px;opacity:0.55;margin-top:8px;}
+  code{font-family:'DM Mono',monospace;background:rgba(212,180,122,0.12);padding:2px 6px;border-radius:4px;font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── Login ── -->
+  <div id="login" class="login-wrap">
+    <h1>SCWP · Admin</h1>
+    <div class="sub">Owner access only</div>
+    <div class="card">
+      <label class="label" for="pw">Admin Password</label>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="••••••••"/>
+      <div class="row" style="margin-top:16px;">
+        <button class="btn grow" id="loginBtn">Sign In</button>
+      </div>
+      <div class="msg error" id="loginMsg"></div>
+    </div>
+  </div>
+
+  <!-- ── Dashboard ── -->
+  <div id="dash" class="hidden">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px;">
+      <div>
+        <h1>SCWP · Admin</h1>
+        <div class="sub">License management</div>
+      </div>
+      <button class="btn ghost" id="logoutBtn">Sign Out</button>
+    </div>
+
+    <div class="card">
+      <span class="label">Create new license</span>
+      <div class="row">
+        <input type="number" min="1" max="20" value="3" id="maxDevices" style="max-width:140px;" title="Max devices"/>
+        <input type="text" id="noteInput" placeholder="Note (e.g. 'Dealer: ABC Windows')" class="grow" maxlength="200"/>
+        <button class="btn" id="createBtn">Create Key</button>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <input type="text" id="customKeyInput" class="grow" placeholder="Custom key (optional) — leave blank to auto-generate · 16 letters/numbers" maxlength="19" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;letter-spacing:.04em;"/>
+      </div>
+      <div class="msg" id="createMsg"></div>
+    </div>
+
+    <div class="row" style="justify-content:space-between;margin:24px 0 8px;">
+      <span class="label" style="margin:0;">Active Licenses</span>
+      <button class="btn ghost" id="refreshBtn" style="padding:8px 14px;font-size:11px;">Refresh</button>
+    </div>
+    <div id="list"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var API = '/.netlify/functions/admin';
+  // Wipe any password persisted by older builds (it used to live in sessionStorage as cleartext).
+  try{ sessionStorage.removeItem('lv_admin_pw_v1'); }catch(e){}
+
+  var loginEl = document.getElementById('login');
+  var dashEl = document.getElementById('dash');
+  var pwEl = document.getElementById('pw');
+  var loginBtn = document.getElementById('loginBtn');
+  var loginMsg = document.getElementById('loginMsg');
+  var logoutBtn = document.getElementById('logoutBtn');
+  var maxDevicesEl = document.getElementById('maxDevices');
+  var noteInputEl = document.getElementById('noteInput');
+  var customKeyInputEl = document.getElementById('customKeyInput');
+  var createBtn = document.getElementById('createBtn');
+  var createMsg = document.getElementById('createMsg');
+  var refreshBtn = document.getElementById('refreshBtn');
+  var listEl = document.getElementById('list');
+
+  // Password is held only in memory for the life of the tab — never written to storage.
+  // Trade-off: a page refresh requires re-login, which is the intended hardening.
+  var _adminPw = '';
+  function getPw(){ return _adminPw; }
+  function setPw(p){ _adminPw = p || ''; }
+  function clearPw(){ _adminPw = ''; }
+
+  function call(action, args){
+    var pw = getPw();
+    return fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify(Object.assign({ password: pw, action: action }, args || {}))
+    }).then(function(r){
+      return r.json().then(function(d){ return { ok: r.ok, status: r.status, data: d }; });
+    });
+  }
+
+  function showDash(){
+    loginEl.classList.add('hidden');
+    dashEl.classList.remove('hidden');
+    loadList();
+  }
+  function showLogin(){
+    dashEl.classList.add('hidden');
+    loginEl.classList.remove('hidden');
+    pwEl.value = '';
+    pwEl.focus();
+  }
+
+  function fmtDate(iso){
+    if(!iso) return '—';
+    try{
+      var d = new Date(iso);
+      return d.toLocaleString();
+    }catch(e){ return iso; }
+  }
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function renderLicenses(licenses){
+    if(!licenses || !licenses.length){
+      listEl.innerHTML = '<div class="card empty">No licenses yet. Generate one above.</div>';
+      return;
+    }
+    listEl.innerHTML = licenses.map(function(L){
+      var devCount = (L.devices || []).length;
+      var max = L.maxDevices || 3;
+      var badge;
+      if(L.revoked) badge = '<span class="badge revoked">Revoked</span>';
+      else if(devCount >= max) badge = '<span class="badge full">Full ' + devCount + '/' + max + '</span>';
+      else badge = '<span class="badge ok">' + devCount + '/' + max + ' devices</span>';
+
+      var devicesHTML = (L.devices || []).map(function(d){
+        return '' +
+          '<div class="dev">' +
+            '<div class="dev-info">' +
+              '<div class="dev-label">' + esc(d.deviceLabel || 'Unknown') + '</div>' +
+              '<div class="dev-meta">Activated ' + esc(fmtDate(d.activatedAt)) + ' · Last seen ' + esc(fmtDate(d.lastSeen)) + '</div>' +
+              '<div class="dev-meta" style="opacity:0.4;">ID: ' + esc(d.deviceId) + '</div>' +
+            '</div>' +
+            '<div class="dev-actions">' +
+              '<button class="btn danger" data-action="deactivate" data-key="' + esc(L.key) + '" data-dev="' + esc(d.deviceId) + '">Deactivate</button>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+      if(!devicesHTML) devicesHTML = '<div class="empty">No devices activated yet.</div>';
+
+      var revokeBtn = L.revoked
+        ? ''
+        : '<button class="btn danger" data-action="revoke" data-key="' + esc(L.key) + '">Revoke Key</button>';
+
+      return '' +
+        '<div class="card lic ' + (L.revoked ? 'revoked' : '') + '">' +
+          '<div class="lic-head">' +
+            '<div>' +
+              '<div class="lic-key">' + esc(L.key) + ' <button class="btn ghost" style="padding:4px 10px;font-size:10px;margin-left:8px;" data-action="copy" data-key="' + esc(L.key) + '">Copy</button></div>' +
+              '<div class="lic-meta">' + badge + ' · Created ' + esc(fmtDate(L.createdAt)) + (L.note ? ' · ' + esc(L.note) : '') + '</div>' +
+            '</div>' +
+            '<div class="lic-actions">' +
+              revokeBtn +
+              '<button class="btn ghost" data-action="delete" data-key="' + esc(L.key) + '">Delete</button>' +
+            '</div>' +
+          '</div>' +
+          devicesHTML +
+        '</div>';
+    }).join('');
+  }
+
+  function loadList(){
+    listEl.innerHTML = '<div class="card empty">Loading...</div>';
+    call('list').then(function(res){
+      if(res.status === 401){ clearPw(); showLogin(); loginMsg.textContent = 'Session expired. Sign in again.'; return; }
+      if(res.ok && res.data && res.data.ok){ renderLicenses(res.data.licenses || []); }
+      else { listEl.innerHTML = '<div class="card empty">Error: ' + esc((res.data && res.data.reason) || 'Unknown') + '</div>'; }
+    }).catch(function(){
+      listEl.innerHTML = '<div class="card empty">Network error.</div>';
+    });
+  }
+
+  loginBtn.addEventListener('click', function(){
+    var pw = pwEl.value || '';
+    if(!pw){ loginMsg.textContent = 'Enter password.'; return; }
+    loginBtn.disabled = true;
+    loginMsg.textContent = 'Signing in...';
+    loginMsg.className = 'msg';
+    // Test with a list call
+    setPw(pw);
+    call('list').then(function(res){
+      loginBtn.disabled = false;
+      if(res.status === 401){ clearPw(); loginMsg.className = 'msg error'; loginMsg.textContent = 'Incorrect password.'; return; }
+      if(res.ok){ loginMsg.textContent = ''; showDash(); }
+      else { clearPw(); loginMsg.className = 'msg error'; loginMsg.textContent = (res.data && res.data.reason) || 'Login failed.'; }
+    }).catch(function(){
+      loginBtn.disabled = false;
+      clearPw();
+      loginMsg.className = 'msg error';
+      loginMsg.textContent = 'Network error.';
+    });
+  });
+  pwEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') loginBtn.click(); });
+
+  logoutBtn.addEventListener('click', function(){ clearPw(); showLogin(); });
+
+  refreshBtn.addEventListener('click', loadList);
+
+  createBtn.addEventListener('click', function(){
+    var max = parseInt(maxDevicesEl.value, 10) || 3;
+    var note = noteInputEl.value || '';
+    var custom = (customKeyInputEl.value || '').trim();
+    // Catch obvious format mistakes before the round-trip (server validates authoritatively).
+    if(custom){
+      var cleaned = custom.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if(cleaned.length !== 16){
+        createMsg.className = 'msg error';
+        createMsg.textContent = 'Custom key must be 16 letters/numbers (4 groups of 4).';
+        return;
+      }
+    }
+    var payload = { maxDevices: max, note: note };
+    if(custom) payload.key = custom;
+    createBtn.disabled = true;
+    createMsg.className = 'msg';
+    createMsg.textContent = custom ? 'Creating...' : 'Generating...';
+    call('createKey', payload).then(function(res){
+      createBtn.disabled = false;
+      if(res.ok && res.data && res.data.ok){
+        createMsg.className = 'msg ok';
+        createMsg.innerHTML = 'Created! Key: <code>' + esc(res.data.key) + '</code> — copied to clipboard.';
+        try{ navigator.clipboard.writeText(res.data.key); }catch(e){}
+        noteInputEl.value = '';
+        customKeyInputEl.value = '';
+        loadList();
+      } else {
+        createMsg.className = 'msg error';
+        createMsg.textContent = (res.data && res.data.reason) || 'Failed.';
+      }
+    }).catch(function(){
+      createBtn.disabled = false;
+      createMsg.className = 'msg error';
+      createMsg.textContent = 'Network error.';
+    });
+  });
+
+  // Event delegation for license action buttons
+  listEl.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    var action = btn.dataset.action;
+    var key = btn.dataset.key;
+    var devId = btn.dataset.dev;
+
+    if(action === 'copy'){
+      try{ navigator.clipboard.writeText(key); btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1500); }catch(e){}
+      return;
+    }
+    if(action === 'deactivate'){
+      if(!confirm('Deactivate this device? They will lose access immediately.')) return;
+      call('deactivateDevice', { key: key, deviceId: devId }).then(function(){ loadList(); });
+      return;
+    }
+    if(action === 'revoke'){
+      if(!confirm('Revoke license ' + key + '? All devices on this key will be locked out.')) return;
+      call('revokeKey', { key: key }).then(function(){ loadList(); });
+      return;
+    }
+    if(action === 'delete'){
+      if(!confirm('Permanently DELETE this license? This cannot be undone.')) return;
+      call('deleteKey', { key: key }).then(function(){ loadList(); });
+      return;
+    }
+  });
+
+  // The admin password is held in memory only (never persisted), so there is never a session to
+  // auto-restore on load — always start at the login screen.
+  showLogin();
+})();
+</script>
+</body>
+</html>

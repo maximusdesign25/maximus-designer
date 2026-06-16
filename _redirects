@@ -1,0 +1,9 @@
+# Netlify Functions — never rewrite
+/.netlify/functions/*   /.netlify/functions/:splat   200
+
+# Admin panel — serve as-is, do not SPA-fallback
+/admin                  /admin.html                  200
+/admin.html             /admin.html                  200
+
+# SPA fallback — let the app handle all other routes
+/*                      /index.html                  200

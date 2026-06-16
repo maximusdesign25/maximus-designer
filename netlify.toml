@@ -1,0 +1,22 @@
+# ═══════════════════════════════════════════════════════════
+#  MAXIMUS PRO (SCWP V6) · Netlify build configuration
+# ═══════════════════════════════════════════════════════════
+
+[build]
+  # Minify the HTML (inline CSS + JS) into dist/ for production.
+  command    = "npm run build"
+  publish    = "dist"
+  functions  = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  # Use the modern Netlify Functions runtime (Node 18, ES modules).
+  node_bundler = "esbuild"
+
+# Local `netlify dev` serves the RAW source root (no build step), so local
+# development always runs the un-minified, fully-working source index.html.
+[dev]
+  framework = "#static"
+  publish   = "."
