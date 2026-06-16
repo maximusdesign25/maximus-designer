@@ -9424,24 +9424,8 @@ if(_bootSaved){ try{ newQuote(); }catch(_){} }
   }catch(_){}
 })();
 
-// Embed mode (inside the Maximus CRM iframe): a floating "‹ CRM" button that tells the parent
-// to close the overlay. Gated on being embedded, so standalone scwp2.netlify.app never shows it.
-(function _crmBackButton(){
-  try{
-    var embedded = (window.parent!==window) || sessionStorage.getItem('scwp_crm_session')==='1';
-    if(!embedded) return;
-    var add=function(){
-      if(document.getElementById('mx-crm-back')) return;
-      var b=document.createElement('button');
-      b.id='mx-crm-back'; b.type='button'; b.textContent='‹ CRM';
-      b.setAttribute('aria-label','Back to Maximus CRM');
-      b.style.cssText='position:fixed;top:calc(env(safe-area-inset-top, 0px) + 8px);left:8px;z-index:2147483600;background:#0A1628;color:#fff;border:none;border-radius:10px;padding:8px 12px;font:600 13px/1 system-ui,-apple-system,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;';
-      b.addEventListener('click',function(){ try{ (window.parent||window).postMessage({type:'scwp.close'}, location.origin); }catch(_){}} );
-      document.body.appendChild(b);
-    };
-    if(document.body) add(); else window.addEventListener('DOMContentLoaded', add);
-  }catch(_){}
-})();
+// (The CRM overlay supplies its own "‹ CRM" top-bar back button, so the designer no longer
+// injects a floating one — that caused two back buttons when embedded.)
 
 // The signed-contract attachment feature was removed. Strip any leftover signedContract blob from saved
 // quotes so the localStorage space it held is reclaimed. One-time + idempotent (no-op once clean).
