@@ -620,6 +620,18 @@ input::placeholder, textarea::placeholder { color: var(--ink-soft); }
 
   // Validate existing license on every load.
   function validateExisting(){
+    // Launched from Maximus CRM (…?crm=1): the rep is already authenticated in the CRM,
+    // so skip the device license gate. Sticky for this TAB session only (the CRM params
+    // get scrubbed from the URL right after boot), and NOT persisted to the device — so a
+    // CRM hand-off never quietly licenses a machine.
+    try{
+      var _crmLaunch = new URLSearchParams(location.search).get('crm') === '1';
+      if(_crmLaunch || sessionStorage.getItem('scwp_crm_session') === '1'){
+        try{ sessionStorage.setItem('scwp_crm_session','1'); }catch(e){}
+        unlockApp();
+        return;
+      }
+    }catch(e){}
     // Manager dev-override: previously unlocked, skip server.
     try{
       if(localStorage.getItem(DEV_OVERRIDE_KEY) === '1'){
