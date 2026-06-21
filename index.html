@@ -1573,11 +1573,30 @@ function typeDiagramOpen(type, opts){
   opts = opts || {};
   return typePreview(type, { color:opts.color, adders:opts.adders, swing:opts.swing, scale:opts.scale, kind:opts.kind, width:opts.width, height:opts.height, trapSide:opts.trapSide, slide:opts.slide, open:true });
 }
+// Mulled / Combination diagram — composes each lite's typeDiagram, arranged stacked (column) or
+// side-by-side (row), with a thin "mullion" bar between lites. Returns an HTML string like typeDiagram.
+function comboDiagram(sections, orientation, opts){
+  opts = opts || {};
+  const secs=(Array.isArray(sections)?sections:[]).filter(s=>s&&s.type);
+  if(secs.length<2) return typeDiagram((secs[0]&&secs[0].type)||"SH", opts);
+  const isRow=orientation==="row";
+  const mullBar=`<div style="${isRow?'width:5px;align-self:stretch':'height:5px;width:100%'};background:`+(opts.dark?'rgba(255,255,255,.28)':'rgba(20,24,34,.30)')+`;border-radius:1px;flex:none"></div>`;
+  const parts=secs.map(s=>`<div style="display:flex;align-items:center;justify-content:center;flex:none">`+
+    typeDiagram(s.type,{color:opts.color,adders:opts.adders,dark:opts.dark,width:s.width,height:s.height,scale:opts.scale})+`</div>`);
+  return `<div style="display:flex;flex-direction:${isRow?'row':'column'};align-items:center;justify-content:center;gap:0">`+parts.join(mullBar)+`</div>`;
+}
 
-const TL={SH:"SH",XO:"XO",OX:"OX",XOX:"XOX",PW:"PW",DH:"DH",XX:"XX",CSMT:"CSMT",AWN:"AWN","GEO Cat.1":"GEO_TRAP","GEO Cat.2":"GEO_HALF","GEO Cat.3":"GEO_CIRC","2-Panel Patio":"2-Panel Patio","3-Panel Patio":"3-Panel Patio","4-Panel Patio":"4-Panel Patio","French Slider 2-Panel":"French Slider (2-Panel)","French Slider 3-Panel":"French Slider (3-Panel)","French Slider 4-Panel":"French Slider (4-Panel)","French Door X":"French Door (X)","French Door XO":"French Door (XO)","French Door XX":"French Door (XX)","French Door 3-Panel":"French Door (3-Panel)","French Door OXXO":"French Door (OXXO)","Side Lite Single":"Side Lite Single","Side Lite Pair":"Side Lite Pair"};
+const TL={SH:"SH",XO:"XO",OX:"OX",XOX:"XOX",PW:"PW",DH:"DH",XX:"XX",CSMT:"CSMT",AWN:"AWN","GEO Cat.1":"GEO_TRAP","GEO Cat.2":"GEO_HALF","GEO Cat.3":"GEO_CIRC","2-Panel Patio":"2-Panel Patio","3-Panel Patio":"3-Panel Patio","4-Panel Patio":"4-Panel Patio","French Slider 2-Panel":"French Slider (2-Panel)","French Slider 3-Panel":"French Slider (3-Panel)","French Slider 4-Panel":"French Slider (4-Panel)","French Door X":"French Door (X)","French Door XO":"French Door (XO)","French Door XX":"French Door (XX)","French Door 3-Panel":"French Door (3-Panel)","French Door OXXO":"French Door (OXXO)","Side Lite Single":"Side Lite Single","Side Lite Pair":"Side Lite Pair",Combination:"Mulled Combo"};
 function dispType(t){return TL[t]||t||"";}
 // Series label for display — "Other" items show their brand name, else the literal "Other".
 function dispSeries(it){if(!it)return"";if(it.series==="Custom")return it.customBrand?it.customBrand:"Other";return it.series||"";}
+// One-line description of a mulled unit's lites, e.g. "PW 36×24 over SH 36×48" (stacked) or "SH 36×48 | SH 36×48" (side-by-side).
+function comboSummary(it){
+  const secs=Array.isArray(it&&it.sections)?it.sections:[];
+  if(secs.length<2)return"";
+  const joiner=(it.comboOrientation==="row")?" | ":" over ";
+  return secs.map(s=>dispType(s.type)+" "+(s.width||"?")+"×"+(s.height||"?")).join(joiner);
+}
 // Adder label for display — the "Other" glass upgrade shows the rep's typed description.
 function adderLbl(k,it){return k==="other"?((it&&it.adderOther&&String(it.adderOther).trim())?it.adderOther:"Other"):k==="tempPattern"?"Tempered Pattern Charge":((ADDER_OPTS.find(a=>a.key===k)||{label:k}).label);}
 
@@ -1833,6 +1852,8 @@ function clearOpening(type, w, h){
 // code: 'na' | 'ok' | 'warn' | 'fail'
 function egressStatus(item){
   if(!item)return {code:'na'};
+  // Mulled / combination units have no single clear opening — egress is judged on the individual operable lite.
+  if(item.type==='Combination')return {code:'na',label:'Egress evaluated per lite'};
   const isBedroom=item.roomType==='bedroom'||(item.roomType==null&&isLikelyBedroom(item.label));
   if(!isBedroom)return {code:'na',label:'Egress not required',detail:'Non-sleeping room'};
   const co=clearOpening(item.type, item.width, item.height);
@@ -2184,6 +2205,9 @@ const S={
   // add form
   series:"Catalina",type:"SH",frame:"R-Fin",color:"White",
   width:"",height:"",qty:"1",labor:"",adders:[],adderOther:"",label:"",doorWidth:"",footBolt:false,petDoor:"",hardware:[],mullionFt:"",trapSide:"Left",legHeight:"",customPrice:"",customBrand:"",customMaterial:"Vinyl",customKind:"window",roomType:null,egressOverride:false,swing:"inswing",slide:"XO",
+  // Mulled/Combination unit: type==="Combination" builds an assembly of lites joined by factory mullion.
+  // comboOrientation: "stacked" (top→bottom) | "row" (left→right). sections: [{type,width,height}] (2–4 lites).
+  comboOrientation:"stacked",sections:[],
   // Infinit-e3 promo: e3Charge=false → standalone e3 is $0 (free). Toggle on → charge e3Price (Anlin default).
   e3Charge:false,e3Price:"",
   // Per-upgrade custom price overrides: {adderKey: "priceString"}. Key present = custom price on
@@ -2714,7 +2738,7 @@ function resetForm(){
   // series can never become the silently-selected default. Falls back to "Custom" if all are off.
   const _ser=(Object.keys(SERIES_TYPES).find(s=>!(S.disabledSeries||[]).includes(s)))||"Custom";
   const _typ=(SERIES_TYPES[_ser]&&SERIES_TYPES[_ser][0])||"SH";
-  upd({series:_ser,type:_typ,frame:"R-Fin",color:"White",width:"",height:"",qty:"1",labor:"",adders:[],adderOther:"",label:"",doorWidth:"",footBolt:false,petDoor:"",hardware:[],mullionFt:"",trapSide:"Left",legHeight:"",editIdx:null,customPrice:"",customBrand:"",customMaterial:"Vinyl",customKind:"window",roomType:null,egressOverride:false,swing:"inswing",slide:"XO",e3Charge:false,e3Price:"",adderPx:{},showBulkApply:false,bulkChg:null,bulkTargets:null},true);
+  upd({series:_ser,type:_typ,frame:"R-Fin",color:"White",width:"",height:"",qty:"1",labor:"",adders:[],adderOther:"",label:"",doorWidth:"",footBolt:false,petDoor:"",hardware:[],mullionFt:"",trapSide:"Left",legHeight:"",editIdx:null,customPrice:"",customBrand:"",customMaterial:"Vinyl",customKind:"window",roomType:null,egressOverride:false,swing:"inswing",slide:"XO",comboOrientation:"stacked",sections:[],e3Charge:false,e3Price:"",adderPx:{},showBulkApply:false,bulkChg:null,bulkTargets:null},true);
 }
 // ── Undo stack (item add / delete / duplicate / reorder) — drives ⌘/Ctrl+Z ──
 let _undoStack=[];
@@ -2732,13 +2756,48 @@ function _undoLast(){
   upd({items:snap.items,itemPhotos:snap.itemPhotos});
   showToast("Undid last change");
 }
+// ── Mulled / Combination pricing ──────────────────────────────────────────────
+// Prices an assembly of lites: each section is priced by its OWN width×height from the
+// Anlin tables (same series/frame/color/adders/e3/px as the unit) via calcPrice, then summed.
+// The factory mullion that joins them is charged SEPARATELY via the item's mullionFt ×
+// MULLION_PER_FT (see hwDocLines) — never folded into the subtotal, so nothing double-charges.
+// Returns the SAME shape calcPrice() returns (line ~1783) PLUS {width,height,mullionFt} for the
+// overall footprint + auto joint feet. orientation: "stacked" (over) | "row" (side-by-side).
+function calcCombo(series,frame,color,sections,adders,orientation,e3opt,px){
+  const secs=(sections||[]).filter(s=>s&&s.type&&parseInt(s.width)>0&&parseInt(s.height)>0);
+  if(secs.length<2)return{err:"Add at least two sections (with sizes) for a mulled unit."};
+  let base=0,glazeTotal=0,colorAdder=0,subtotal=0,warn=null;
+  for(let i=0;i<secs.length;i++){
+    const s=secs[i];
+    const r=calcPrice(series,s.type,frame,s.width,s.height,adders,color,"","",e3opt,px);
+    if(r.err)return{err:"Section "+(i+1)+" ("+s.type+" "+s.width+"×"+s.height+"): "+r.err};
+    base+=r.base; glazeTotal+=r.glazeTotal; colorAdder+=r.colorAdder; subtotal+=r.subtotal;
+    if(r.sizeWarning)warn=warn?warn+" · "+r.sizeWarning:r.sizeWarning;
+  }
+  const ws=secs.map(s=>parseInt(s.width)||0),hs=secs.map(s=>parseInt(s.height)||0);
+  const isRow=orientation==="row";
+  const oW=isRow?ws.reduce((a,b)=>a+b,0):Math.max(...ws);   // stacked: widest lite; row: sum of widths
+  const oH=isRow?Math.max(...hs):hs.reduce((a,b)=>a+b,0);   // stacked: sum of heights; row: tallest lite
+  // (n−1) internal mull joints, each running the full joining dimension (stacked → width, row → height).
+  const jointFt=((secs.length-1)*(isRow?oH:oW))/12;
+  return{base,adderTotal:glazeTotal+colorAdder,glazeTotal,colorAdder,subtotal,brk:secs.length+"-lite mulled",effectiveAdders:[...(adders||[])],sizeWarning:warn,customPriceUsed:false,err:null,width:String(oW),height:String(oH),mullionFt:jointFt.toFixed(2)};
+}
 function saveItem(){
   const{series,type,frame,color,width,height,qty,labor,adders,label,doorWidth,editIdx,items}=S;
-  if(!width||!height)return;
-  const r=calcPrice(series,type,frame,width,height,adders,color,doorWidth,S.customPrice,{charge:S.e3Charge,price:S.e3Price},S.adderPx);
-  if(r.err)return;
-  // Admin hard-block: refuse to save a bedroom item that fails egress and has no exception.
-  if(S.egressHardBlock){
+  const isCombo=type==="Combination";
+  let r,useW=width,useH=height,comboMull=null,comboSections;
+  if(isCombo){
+    r=calcCombo(series,frame,color,S.sections,adders,S.comboOrientation,{charge:S.e3Charge,price:S.e3Price},S.adderPx);
+    if(r.err){try{alert(r.err);}catch(_){}return;}
+    useW=r.width;useH=r.height;comboMull=r.mullionFt;
+    comboSections=(S.sections||[]).map(s=>({type:s.type,width:s.width,height:s.height}));
+  }else{
+    if(!width||!height)return;
+    r=calcPrice(series,type,frame,width,height,adders,color,doorWidth,S.customPrice,{charge:S.e3Charge,price:S.e3Price},S.adderPx);
+    if(r.err)return;
+  }
+  // Admin hard-block: refuse to save a bedroom item that fails egress and has no exception. (Combos: skip — no single opening.)
+  if(S.egressHardBlock&&!isCombo){
     const pseudo={type,width,height,label,roomType:S.roomType,egressOverride:S.egressOverride};
     const es=egressStatus(pseudo);
     if(es&&(es.code==='fail' || (es.code==='warn' && !S.egressOverride))){
@@ -2760,14 +2819,14 @@ function saveItem(){
   const lab=userTyped?parseFloat(labor):al;
   const laborAuto=!userTyped;
   const existNote=(editIdx!==null&&items[editIdx])?(items[editIdx].note||""):"";
-  const item={series,type,frame,color,width,height,qty:q,labor:lab,laborAuto,adders:[...adders],adderOther:adders.includes("other")?(S.adderOther||""):"",label,price:r,note:existNote,doorWidth,footBolt:S.footBolt,petDoor:S.petDoor,hardware:series==="Custom"?[]:[...(S.hardware||[])],mullionFt:series==="Custom"?"":(S.mullionFt||""),trapSide:S.trapSide||"Left",legHeight:S.legHeight||"",customPrice:S.customPrice||"",customBrand:series==="Custom"?(S.customBrand||""):"",customMaterial:series==="Custom"?(S.customMaterial||"Vinyl"):"Vinyl",customKind:series==="Custom"?(S.customKind||"window"):undefined,roomType:S.roomType||null,e3Charge:!!S.e3Charge,e3Price:S.e3Charge?(S.e3Price||""):"",adderPx:_cleanAdderPx(S.adderPx,adders),egressOverride:!!S.egressOverride,swing:_DOOR_SWING_TYPES.has(type)?(S.swing||"inswing"):undefined,slide:_saveSlide(type)};
+  const item={series,type,frame,color,width:useW,height:useH,qty:q,labor:lab,laborAuto,adders:[...adders],adderOther:adders.includes("other")?(S.adderOther||""):"",label,price:r,note:existNote,doorWidth,footBolt:S.footBolt,petDoor:S.petDoor,hardware:series==="Custom"?[]:[...(S.hardware||[])],mullionFt:isCombo?(comboMull||""):(series==="Custom"?"":(S.mullionFt||"")),trapSide:S.trapSide||"Left",legHeight:S.legHeight||"",customPrice:S.customPrice||"",customBrand:series==="Custom"?(S.customBrand||""):"",customMaterial:series==="Custom"?(S.customMaterial||"Vinyl"):"Vinyl",customKind:series==="Custom"?(S.customKind||"window"):undefined,roomType:S.roomType||null,e3Charge:!!S.e3Charge,e3Price:S.e3Charge?(S.e3Price||""):"",adderPx:_cleanAdderPx(S.adderPx,adders),egressOverride:!!S.egressOverride,swing:_DOOR_SWING_TYPES.has(type)?(S.swing||"inswing"):undefined,slide:_saveSlide(type),sections:isCombo?comboSections:undefined,comboOrientation:isCombo?(S.comboOrientation||"stacked"):undefined};
   let newItems=editIdx!==null?items.map((it,i)=>i===editIdx?item:it):[...items,item];
   // Re-tier auto-labor items now that the total qty may have changed.
   newItems=recomputeAutoLabor(newItems);
   // Track recent product types (feature 5) — most recent first, max 5
   const recentEntry={series,type,frame,color,adders:[...adders],adderOther:adders.includes("other")?(S.adderOther||""):"",label,swing:_DOOR_SWING_TYPES.has(type)?(S.swing||"inswing"):undefined,slide:_saveSlide(type),customBrand:series==="Custom"?(S.customBrand||""):"",customPrice:series==="Custom"?(S.customPrice||""):"",customMaterial:series==="Custom"?(S.customMaterial||"Vinyl"):"Vinyl",customKind:series==="Custom"?(S.customKind||"window"):undefined};
   const recent=(S.recentTypes||[]).filter(r=>!(r.series===series&&r.type===type&&r.frame===frame));
-  recent.unshift(recentEntry);
+  if(!isCombo)recent.unshift(recentEntry);   // don't cache combos as a quick-repeat recipe
   const trimmed=recent.slice(0,5);
   resetForm();
   _pushUndo();   // snapshot pre-add/edit items so ⌘Z can revert
@@ -2785,7 +2844,7 @@ const _BULK_SAFETY=["tempered","firecode","halftemp"];
 // Apply the currently-selected changes (S.bulkChg, sourced from the edit form) to ONE item.
 // Returns the repriced item, or null if nothing applicable changed / it can't be priced.
 function _bulkApplyToItem(it){
-  if(!it || it.series==="Custom") return null;          // "Other" is priced manually — skip
+  if(!it || it.series==="Custom" || it.type==="Combination") return null;   // "Other" priced manually; mulled units re-price per-lite — skip both
   const chg=S.bulkChg||{ups:{}};
   let color=it.color, frame=it.frame, adders=[...(it.adders||[])], touched=false;
   if(chg.color && S.color && S.color!==color){ color=S.color; touched=true; }
@@ -2859,7 +2918,7 @@ function editItem(i){
   const e3ChargeLoad=(it.e3Charge!==undefined)?!!it.e3Charge:_legStandaloneE3;
   const e3PriceLoad=(it.e3Price!==undefined)?(it.e3Price||""):"";
   const adderPxLoad=(it.adderPx&&typeof it.adderPx==="object")?{...it.adderPx}:{};
-  upd({series:it.series,type:it.type,frame:it.frame,color:it.color,width:String(it.width),height:String(it.height),qty:String(it.qty),labor:laborField,doorWidth:it.doorWidth||"",footBolt:!!it.footBolt,petDoor:it.petDoor||"",hardware:[...(it.hardware||[])],mullionFt:it.mullionFt||"",trapSide:it.trapSide||"Left",legHeight:it.legHeight||"",adders:[...safeAdders],adderOther:it.adderOther||"",label:it.label,editIdx:i,customPrice:it.customPrice||"",customBrand:it.customBrand||"",customMaterial:it.customMaterial||"Vinyl",customKind:it.customKind||"window",roomType:it.roomType||null,e3Charge:e3ChargeLoad,e3Price:e3PriceLoad,adderPx:adderPxLoad,egressOverride:!!it.egressOverride,swing:it.swing||"inswing",slide:it.slide||"XO",screen:"add"});
+  upd({series:it.series,type:it.type,frame:it.frame,color:it.color,width:String(it.width),height:String(it.height),qty:String(it.qty),labor:laborField,doorWidth:it.doorWidth||"",footBolt:!!it.footBolt,petDoor:it.petDoor||"",hardware:[...(it.hardware||[])],mullionFt:it.mullionFt||"",trapSide:it.trapSide||"Left",legHeight:it.legHeight||"",adders:[...safeAdders],adderOther:it.adderOther||"",label:it.label,editIdx:i,customPrice:it.customPrice||"",customBrand:it.customBrand||"",customMaterial:it.customMaterial||"Vinyl",customKind:it.customKind||"window",roomType:it.roomType||null,e3Charge:e3ChargeLoad,e3Price:e3PriceLoad,adderPx:adderPxLoad,egressOverride:!!it.egressOverride,swing:it.swing||"inswing",slide:it.slide||"XO",comboOrientation:it.comboOrientation||"stacked",sections:Array.isArray(it.sections)?it.sections.map(s=>({...s})):[],screen:"add"});
 }
 // ── Photo remap helpers ─────────────────────────────────
 // Photos are keyed by item index. Any op that shifts indices must remap them.
@@ -3091,6 +3150,7 @@ function loadJob(job){
   const safeItems=recomputeAutoLabor((job.items||[]).map(it=>({
     ...it,
     adders:Array.isArray(it.adders)?it.adders:[],
+    sections:Array.isArray(it.sections)?it.sections:undefined,   // combo lites (legacy items have none)
     price:it.price&&typeof it.price==="object"?it.price:{subtotal:0,base:0,adderTotal:0,glazeTotal:0,colorAdder:0,err:null},
     labor:it.labor||0,
     qty:it.qty||1,
@@ -3568,7 +3628,10 @@ function openPreview(spec){
 
   const renderDiagram = () => {
     let svg;
-    if (isOperable && viewState === 'open' && typeof typeDiagramOpen === 'function') {
+    if (spec.type === 'Combination') {
+      svg = comboDiagram(spec.sections, spec.comboOrientation, {color:spec.color, adders:spec.adders, dark:dk, scale:1.1});
+    }
+    if (!svg && isOperable && viewState === 'open' && typeof typeDiagramOpen === 'function') {
       svg = typeDiagramOpen(spec.type, {color:spec.color, adders:spec.adders, swing:spec.swing, slide:spec.slide, kind:spec.customKind, dark:dk, width:spec.width, height:spec.height, trapSide:spec.trapSide, scale:1.5});
     }
     if (!svg) {
@@ -4300,7 +4363,7 @@ async function _buildPhotoReportPDF(){
     const it=S.items[i];
     if(!it)return;
     const label=it.label||(dispSeries(it)+" "+(typeof dispType==='function'?dispType(it.type):it.type));
-    const spec=it.width+'"W \u00d7 '+it.height+'"H \u00b7 '+it.frame+' \u00b7 '+it.color;
+    const spec=it.width+'"W \u00d7 '+it.height+'"H \u00b7 '+it.frame+' \u00b7 '+it.color+(it.type==="Combination"?(' \u00b7 '+comboSummary(it)):'');
     const adderList=(it.adders&&it.adders.length>0)
       ? it.adders.map(k=>adderLbl(k,it)).join(", ")
       : "";
@@ -4753,7 +4816,7 @@ function _buildEstimatePDF(D,PKG,mup,discAmt,permitAmt,fp,r,n,mo,today,qn){
     // Prepend the item number to whichever heading runs first on the row.
     const numberedRoomLabel=roomLabel?(itemNum+' · '+roomLabel):'';
     const typeLabel=(roomLabel?'':itemNum+' · ')+(dispSeries(it)+' — '+(typeof dispType==='function'?dispType(it.type):it.type));
-    const sub=it.width+'\"W × '+it.height+'\"H · '+it.frame+' · '+it.color+(it.qty>1?' × '+it.qty:'');
+    const sub=it.width+'\"W × '+it.height+'\"H · '+it.frame+' · '+it.color+(it.type==="Combination"?(' · '+comboSummary(it)):'')+(it.qty>1?' × '+it.qty:'');
 
     // Glass-upgrade lines via the shared glazeLines() — same source as pricing, so each
     // printed amount reconciles with the line total. Tempered folds e3 in (no separate
@@ -6261,7 +6324,9 @@ function _renderImpl(app){
     }
 
     // ── Live price preview ─────────────────────────────────
-    const lp2=S.width&&S.height?calcPrice(S.series,S.type,S.frame,S.width,S.height,S.adders,S.color,S.doorWidth,S.customPrice,{charge:S.e3Charge,price:S.e3Price},S.adderPx):null;
+    const lp2=S.type==="Combination"
+      ?calcCombo(S.series,S.frame,S.color,S.sections,S.adders,S.comboOrientation,{charge:S.e3Charge,price:S.e3Price},S.adderPx)
+      :(S.width&&S.height?calcPrice(S.series,S.type,S.frame,S.width,S.height,S.adders,S.color,S.doorWidth,S.customPrice,{charge:S.e3Charge,price:S.e3Price},S.adderPx):null);
     if(lp2&&!lp2.err){
       const pb=div({
         background:c.text,color:c.bg,
@@ -6285,9 +6350,21 @@ function _renderImpl(app){
       r3.appendChild(el("span",{style:{fontSize:"13px",fontWeight:"500",letterSpacing:"-0.005em"}},"Unit price"));
       r3.appendChild(el("span",{style:{fontFamily:"'Fraunces',Georgia,serif",fontSize:"26px",fontWeight:"500",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums",color:c.accent}},fmt(lp2.subtotal)));
       pb.appendChild(r3);
+      // Combination: show the factory mullion that joins the lites (a separate quote line, charged per linear foot).
+      if(S.type==="Combination"&&lp2.mullionFt&&parseFloat(lp2.mullionFt)>0){
+        const mFt=parseFloat(lp2.mullionFt),mCost=Math.ceil(mFt)*MULLION_PER_FT;
+        const rm=div({display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:"13px",padding:"8px 0 0",marginTop:"6px",opacity:.7});
+        rm.appendChild(txt("Factory mullion ("+mFt.toFixed(1)+" ft)"));
+        rm.appendChild(el("span",{style:{fontFamily:"'JetBrains Mono',monospace",fontVariantNumeric:"tabular-nums"}},"+"+fmt(mCost)));
+        pb.appendChild(rm);
+        const rt=div({display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"10px 0 0",marginTop:"8px",borderTop:"1px solid "+(S.darkMode?"rgba(11,11,15,.18)":"rgba(250,250,247,.16)")});
+        rt.appendChild(el("span",{style:{fontSize:"13px",fontWeight:"500"}},"Unit + mullion"));
+        rt.appendChild(el("span",{style:{fontFamily:"'Fraunces',Georgia,serif",fontSize:"22px",fontWeight:"500",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums",color:c.accent}},fmt(lp2.subtotal+mCost)));
+        pb.appendChild(rt);
+      }
       if(lp2.sizeWarning)pb.appendChild(el("div",{style:{marginTop:"10px",fontSize:"12px",color:c.gold,opacity:.85,letterSpacing:"-0.005em"}},"⚠ "+lp2.sizeWarning));
-      // ── Egress strip (CRC R310) — appears inside the live preview. Hidden if admin disabled. ──
-      if(S.egressBadgesOn){
+      // ── Egress strip (CRC R310) — appears inside the live preview. Hidden if admin disabled. (Combos use the sections builder; no single-window egress.) ──
+      if(S.egressBadgesOn&&S.type!=="Combination"){
         const pseudoItem={type:S.type,width:S.width,height:S.height,label:S.label,roomType:S.roomType,egressOverride:S.egressOverride};
         const es=egressStatus(pseudoItem);
         // Colors for on-dark tinted strip
@@ -6397,6 +6474,8 @@ function _renderImpl(app){
       SERIES_TYPES[S.series].forEach(t=>{
         tChips.appendChild(chip(TL[t]||t,S.type===t,()=>upd({type:t,slide:(_DOOR_CONFIGS[t]||[])[0]||""}),c));
       });
+      // Mulled / Combination — an assembly of lites joined by factory mullion (stacked or side-by-side).
+      tChips.appendChild(chip("Mulled / Combo",S.type==="Combination",()=>upd({type:"Combination",sections:(Array.isArray(S.sections)&&S.sections.length>=2)?S.sections:[{type:"PW",width:"",height:""},{type:(SERIES_TYPES[S.series][0]||"SH"),width:"",height:""}]}),c));
       tc.appendChild(tChips);
     }
     body.appendChild(tc);
@@ -6425,6 +6504,56 @@ function _renderImpl(app){
       });
       swCard.appendChild(swRow);
       body.appendChild(swCard);
+    }
+
+    // Mulled / Combination sections builder — replaces the single-window Dimensions card.
+    // Each "lite" is priced by its own size from the Anlin tables; factory mullion is added by saveItem.
+    if(S.type==="Combination"){
+      const cc=div(cardStyle(c));
+      cc.appendChild(el("label",{style:labelStyle(c)},"Mulled / Combination unit"));
+      cc.appendChild(el("div",{style:{fontSize:"11px",color:c.muted,marginBottom:"10px"}},"An assembly of lites joined by factory mullion. Each lite is priced by its own size from the Anlin pricebook; the joining mullion is added automatically."));
+      // Arrangement: stacked (over/under) or side-by-side (row).
+      const orow=div({display:"flex",gap:"10px",marginBottom:"4px"});
+      [["stacked","Stacked (over/under)"],["row","Side-by-side"]].forEach(([k,lbl])=>{ orow.appendChild(chip(lbl,(S.comboOrientation||"stacked")===k,()=>upd({comboOrientation:k}),c)); });
+      cc.appendChild(orow);
+      cc.appendChild(el("div",{style:{fontSize:"11px",color:c.muted,margin:"6px 0 12px"}},"Lites are ordered "+((S.comboOrientation==="row")?"left → right":"top → bottom")+"."));
+      // Mullable window types for this series (exclude geometric/bay/bow — those are their own assemblies).
+      const mullTypes=(SERIES_TYPES[S.series]||[]).filter(t=>t!=="Combination"&&!/^GEO|^Bay$|^Bow$/.test(t));
+      const secs=Array.isArray(S.sections)?S.sections:[];
+      secs.forEach((s,idx)=>{
+        const sc=div({border:"1px solid "+c.border,borderRadius:"12px",padding:"12px",marginBottom:"10px"});
+        const hd=div({display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"});
+        hd.appendChild(el("div",{style:{fontSize:"12px",fontWeight:"700",color:c.text}},"Lite "+(idx+1)));
+        if(secs.length>2){
+          const rm=el("button",{style:{background:"none",border:"none",color:c.muted,fontSize:"12px",cursor:"pointer",padding:"2px 6px"}},"Remove");
+          rm.addEventListener("click",()=>upd({sections:(S.sections||[]).filter((_,i)=>i!==idx)}));
+          hd.appendChild(rm);
+        }
+        sc.appendChild(hd);
+        // Per-lite type chips
+        const tr=div({display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"8px"});
+        mullTypes.forEach(t=>{ tr.appendChild(chip(TL[t]||t,(s.type===t),()=>upd({sections:(S.sections||[]).map((x,i)=>i===idx?{...x,type:t}:x)}),c)); });
+        sc.appendChild(tr);
+        // Per-lite Width / Height (set S directly on input to avoid focus loss; render on blur)
+        const wh=div({display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"});
+        [["width","Width","36"],["height","Height","48"]].forEach(([k,lbl,ph])=>{
+          const col=div({});col.appendChild(el("label",{style:{...labelStyle(c),marginBottom:"4px"}},lbl));
+          const fi=el("input",{type:"number",inputmode:"numeric",placeholder:ph,style:inputStyle(c)});
+          fi.value=s[k]||"";_selOnFocus(fi);
+          fi.addEventListener("input",e=>{ S.sections=(S.sections||[]).map((x,i)=>i===idx?{...x,[k]:e.target.value}:x); });
+          fi.addEventListener("blur",()=>render());
+          col.appendChild(fi);wh.appendChild(col);
+        });
+        sc.appendChild(wh);
+        if(s.width&&s.height)sc.appendChild(el("div",{style:{fontSize:"11px",color:c.muted,marginTop:"6px"}},"UI = "+(parseInt(s.width||0)+parseInt(s.height||0))));
+        cc.appendChild(sc);
+      });
+      if(secs.length<4){
+        const add=el("button",{style:{background:"none",border:"1px dashed "+c.border,borderRadius:"10px",color:c.accent,fontSize:"13px",fontWeight:"600",cursor:"pointer",padding:"10px",width:"100%"}},"+ Add lite");
+        add.addEventListener("click",()=>upd({sections:[...(S.sections||[]),{type:(mullTypes[0]||"SH"),width:"",height:""}]}));
+        cc.appendChild(add);
+      }
+      body.appendChild(cc);
     }
 
     // Dimensions card
@@ -6524,7 +6653,7 @@ function _renderImpl(app){
       lhi.addEventListener("blur",()=>{ if(_dimTabbing)return; render(); });
       dc.appendChild(lhi);
     }
-    body.appendChild(dc);
+    if(S.type!=="Combination")body.appendChild(dc);   // combos use the sections builder above instead
 
     // Frame + Color card
     const fc=div(cardStyle(c));
@@ -6850,7 +6979,8 @@ function _renderImpl(app){
     }
 
     // ── Save button (sticky bottom on iPad+) ──
-    const canSave=S.width&&S.height&&!(lp2&&lp2.err);
+    // Combos have no top-level W/H — they're valid once calcCombo accepts the sections (≥2 sized lites).
+    const canSave=S.type==="Combination"?!!(lp2&&!lp2.err):(S.width&&S.height&&!(lp2&&lp2.err));
     const savBtn=btn(S.editIdx!==null?"Update Item":"Add to Quote",()=>{if(canSave)saveItem();},{
       background:canSave?c.accent:c.light,
       color:canSave?"#FFFFFF":c.muted,
@@ -7078,6 +7208,11 @@ function _renderImpl(app){
         const _safeAdders=it.adders||[];
         const subD=el("div",{style:{fontSize:"12.5px",color:c.muted,letterSpacing:"-0.005em",lineHeight:"1.45"}},it.width+"″ × "+it.height+"″ · "+it.frame+" · "+it.color+(_safeAdders.length>0?" · "+_safeAdders.map(k=>adderLbl(k,it)).join(", "):"")+( extraOpts.length>0?" · "+extraOpts.join(", "):""));
         tl.appendChild(subD);
+        // Mulled unit — list the lites under the overall dims (e.g. "PW 36×24 over SH 36×48").
+        if(it.type==="Combination"){
+          const _cs=comboSummary(it);
+          if(_cs)tl.appendChild(el("div",{style:{fontSize:"12px",color:c.accent,marginTop:"3px",letterSpacing:"-0.005em",lineHeight:"1.4"}},(it.comboOrientation==="row"?"⊞ ":"⊟ ")+_cs));
+        }
         // ── Status badges (premium pills): egress (CRC R310) + fire-zone temper (Ch.7A) ──
         if(S.egressBadgesOn || S.fireTemper){
           const badgeRow=div({display:"flex",flexWrap:"wrap",gap:"6px",marginTop:"9px"});
@@ -7244,7 +7379,9 @@ function _renderImpl(app){
             display:"flex",alignItems:"center",justifyContent:"center",
             padding:"3px",boxSizing:"border-box",overflow:"hidden"
           });
-          prvThumb.innerHTML=typeDiagram(it.type,{color:it.color,adders:it.adders,swing:it.swing,slide:it.slide,kind:it.customKind,dark:S.darkMode,width:it.width,height:it.height,scale:0.2});
+          prvThumb.innerHTML=it.type==="Combination"
+            ?comboDiagram(it.sections,it.comboOrientation,{color:it.color,adders:it.adders,dark:S.darkMode,scale:0.16})
+            :typeDiagram(it.type,{color:it.color,adders:it.adders,swing:it.swing,slide:it.slide,kind:it.customKind,dark:S.darkMode,width:it.width,height:it.height,scale:0.2});
           const _svg=prvThumb.querySelector("svg");
           if(_svg)Object.assign(_svg.style,{width:"100%",height:"100%"});
           prvRow.appendChild(prvThumb);
@@ -8081,7 +8218,7 @@ function _renderImpl(app){
         const ir=div({padding:"8px 0",borderBottom:"1px solid #EEF1F8",display:"flex",justifyContent:"space-between",alignItems:"flex-start"});
         const il=div({flex:"1",paddingRight:"12px"});
         il.appendChild(el("div",{style:{fontSize:"13px",fontWeight:"bold",color:"#1A2540"}},(it.label||(dispSeries(it)+" "+(dispType(it.type))))+(it.qty>1?" ×"+it.qty:"")));
-        il.appendChild(el("div",{style:{fontSize:"11px",color:"#6B7A99",marginTop:"1px"}},dispSeries(it)+" "+(dispType(it.type))+" · "+it.width+'"W × '+it.height+'"H · '+it.frame+" · "+it.color));
+        il.appendChild(el("div",{style:{fontSize:"11px",color:"#6B7A99",marginTop:"1px"}},dispSeries(it)+" "+(dispType(it.type))+" · "+it.width+'"W × '+it.height+'"H · '+it.frame+" · "+it.color+(it.type==="Combination"?(" · "+comboSummary(it)):"")));
         if(TL[it.type]==="GEO_TRAP"&&(it.legHeight||it.trapSide))il.appendChild(el("div",{style:{fontSize:"11px",color:"#4A6080",marginTop:"1px"}},"Leg: "+(it.trapSide||"Left")+" side · Leg Ht: "+(it.legHeight||"—")+'"'));
         // Per-adder lines — glazeLines() is the same source as pricing (tempered folds e3 in;
         // standalone e3 honors the toggle). A $0 line prints "Included" instead of "+$0.00".
